@@ -1,0 +1,28 @@
+# Env + Secrets
+.env
+*.env
+.env.*
+**/token.json
+
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.out
+*.test
+cli-radio
+
+# Build / Cache
+/build/
+/bin/
+/pkg/
+*.log
+
+# IDE / Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.DS_Store
