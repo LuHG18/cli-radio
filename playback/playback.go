@@ -2,10 +2,13 @@ package playback
 
 import (
 	"bufio"
+	"cli-radio/api/spotify"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
+	"net/url"
 
-	// "os"
 	"os/exec"
 
 	"strings"
@@ -15,7 +18,7 @@ import (
 
 var (
 	currentProcess *exec.Cmd
-	currentSong    string
+	CurrentSong    string
 	playbackMutex  sync.Mutex
 )
 
@@ -71,7 +74,17 @@ func PlayStation(url string, stationName string) {
 							songInfo = "Song unavailable"
 						}
 						updateCurrentSong(songInfo) // Update the current song
+						token, err := spotify.GetToken()
+						if err != nil {
+							fmt.Println("Erorr from GetToken() :", err)
+						}
+						songURI, err := GetSongURI(token)
+						if err != nil {
+							fmt.Println("Error in GetSongURI:", err)
+							return
+						}
 						fmt.Printf("\rNow playing: %s\n> ", songInfo)
+						fmt.Printf("\rSong URI: %s\n>", songURI)
 					}
 				}
 			}
@@ -121,17 +134,69 @@ func StopPlayback() {
 func GetCurrentSong() string {
 	playbackMutex.Lock()
 	defer playbackMutex.Unlock()
-	return currentSong
+	return CurrentSong
 }
 
 func updateCurrentSong(song string) {
 	playbackMutex.Lock()
 	defer playbackMutex.Unlock()
-	currentSong = song
+	CurrentSong = song
 }
 
-func addSong() {
-	playbackMutex.Lock()
-	defer playbackMutex.Lock()
+// func addSong() {
+// 	playbackMutex.Lock()
+// 	defer playbackMutex.Lock()
 
+// }
+
+type searchResponse struct {
+	Tracks struct {
+		Items []struct {
+			URI     string `json:"uri"`
+			Name    string `json:"name"`
+			Artists []struct {
+				Name string `json:"name"`
+			} `json:"artists"`
+		} `json:"items"`
+	} `json:"tracks"`
+}
+
+func GetSongURI(token *spotify.Token) (string, error) {
+	query := CurrentSong
+	if query == "" {
+		return "", fmt.Errorf("invalid song string: %q", CurrentSong)
+	}
+
+	fullUrl := fmt.Sprintf("%s?q=%s&type=track&limit=1", spotify.SearchUrl, url.QueryEscape(query))
+	// build the body of the request
+	req, err := http.NewRequest("GET", fullUrl, nil)
+	if err != nil {
+		return "", fmt.Errorf("couldn't build song request: %w", err)
+	}
+
+	// add a header to the request with our access token
+	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
+
+	// make the actual request
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("search request failed: %w", err)
+	}
+
+	defer resp.Body.Close() // close the TCP connection
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("spotify search failed: %q", resp.Status)
+	}
+
+	var data searchResponse
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil { // err stays within the scope of the conditional
+		return "", fmt.Errorf("could not decode response: %w", err)
+	}
+
+	if len(data.Tracks.Items) == 0 {
+		return "", fmt.Errorf("no tracks found for this search: %q", query)
+	}
+
+	fmt.Printf("URI: %s", data.Tracks.Items[0].URI)
+	return data.Tracks.Items[0].URI, nil
 }

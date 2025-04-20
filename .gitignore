@@ -3,6 +3,7 @@
 *.env
 .env.*
 **/token.json
+**/playlist.json
 
 # Binaries
 *.exe

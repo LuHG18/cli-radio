@@ -11,7 +11,7 @@ import (
 const (
 	apiBaseURL   = "https://api.spotify.com/v1"
 	playlistUrl  = "https://api.spotify.com/v1/me/playlists"
-	searchUrl    = "https://api.spotify.com/v1/search"
+	SearchUrl    = "https://api.spotify.com/v1/search"
 	playlistName = "TEMPLE"
 )
 
@@ -22,10 +22,11 @@ type Playlist struct {
 	Name string `json:"name"`
 }
 
-// func AddToPlaylist() (string, error) {
+// func AddToPlaylist(songUri string) () {
 // 	// should just call spotify API call for adding to a playlist
 // 	// we need the spotify ID of the playlist, track uri
-// 	return "yurr", err
+// 	req, err := http.NewRequest("POST", playlistUrl, strings.NewReader(fmt.Sprintf(`{"song":"%s"}`, songUri)))
+// 	return
 // }
 
 func CreatePlaylist(token *Token) (string, error) {

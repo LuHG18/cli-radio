@@ -23,6 +23,7 @@ type Token struct {
 	ExpiresAt    int64  `json:"expires_at"` // Unix timestamp
 }
 
+// external token access function (makes sure token.json is up-to-date and valid)
 func GetToken() (*Token, error) {
 	// Check if the token file exists
 	if _, err := os.Stat(tokenFile); os.IsNotExist(err) {
@@ -45,6 +46,7 @@ func GetToken() (*Token, error) {
 	return token, nil
 }
 
+// reads and parses access token from token.json
 func loadToken() (*Token, error) {
 	data, err := os.ReadFile(tokenFile)
 	if err != nil {
