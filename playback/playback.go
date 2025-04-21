@@ -31,9 +31,6 @@ func PlayStation(url string, stationName string) {
 
 	fmt.Printf("Starting playback: %s\n", stationName)
 	currentProcess = exec.Command("mpv", "--no-video", url)
-	// currentProcess.Stdin = nil
-	// currentProcess.Stdout = os.Stdout
-	// currentProcess.Stderr = nil
 
 	stdoutPipe, err := currentProcess.StdoutPipe()
 	if err != nil {
@@ -107,11 +104,6 @@ func PlayStation(url string, stationName string) {
 }
 
 func StopPlayback() {
-	// if currentProcess != nil {
-	// 	_ = currentProcess.Process.Kill()
-	// 	time.Sleep(100 * time.Millisecond)
-	// 	currentProcess = nil
-	// }
 	if currentProcess != nil {
 		// Send a SIGKILL to the current process group
 		err := syscall.Kill(-currentProcess.Process.Pid, syscall.SIGKILL)
@@ -121,8 +113,6 @@ func StopPlayback() {
 			fmt.Println("Stopped current playback.")
 		}
 
-		// Wait briefly to ensure the process is fully terminated
-		// time.Sleep(100 * time.Millisecond)
 		currentProcess = nil
 	}
 }
@@ -138,12 +128,6 @@ func updateCurrentSong(song string) {
 	defer playbackMutex.Unlock()
 	CurrentSong = song
 }
-
-// func addSong() {
-// 	playbackMutex.Lock()
-// 	defer playbackMutex.Lock()
-
-// }
 
 type searchResponse struct {
 	Tracks struct {

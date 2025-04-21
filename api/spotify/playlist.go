@@ -30,8 +30,7 @@ func AddToPlaylist(songUri string) (string, error) {
 	if err != nil {
 		fmt.Println("Erorr from GetToken() :", err)
 	}
-	// should just call spotify API call for adding to a playlist
-	// we need the spotify ID of the playlist, track uri
+
 	playlist, err := GetPlaylist()
 	if err != nil {
 		return "", err
