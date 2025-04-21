@@ -24,8 +24,11 @@ var (
 
 func PlayStation(url string, stationName string) {
 	playbackMutex.Lock()
-	defer playbackMutex.Unlock()
 	StopPlayback()
+	playbackMutex.Unlock()
+
+	updateCurrentSong("")
+
 	fmt.Printf("Starting playback: %s\n", stationName)
 	currentProcess = exec.Command("mpv", "--no-video", url)
 	// currentProcess.Stdin = nil
@@ -72,15 +75,12 @@ func PlayStation(url string, stationName string) {
 						songInfo := strings.TrimSpace(parts[1])
 						if songInfo == "" || songInfo == "-" {
 							songInfo = "Song unavailable"
-						}
-						updateCurrentSong(songInfo) // Update the current song
-						songURI, err := GetSongURI()
-						if err != nil {
-							fmt.Println("Error in GetSongURI:", err)
+							updateCurrentSong(songInfo)
+							fmt.Printf("\rNow playing: %s\n> ", songInfo)
 							return
 						}
+						updateCurrentSong(songInfo) // Update the current song
 						fmt.Printf("\rNow playing: %s\n> ", songInfo)
-						fmt.Printf("\rSong URI: %s\n>", songURI)
 					}
 				}
 			}
@@ -197,6 +197,5 @@ func GetSongURI() (string, error) {
 		return "", fmt.Errorf("no tracks found for this search: %q", query)
 	}
 
-	fmt.Printf("URI: %s\n", data.Tracks.Items[0].URI)
 	return data.Tracks.Items[0].URI, nil
 }

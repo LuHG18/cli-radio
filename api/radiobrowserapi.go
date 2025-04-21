@@ -16,8 +16,8 @@ type Station struct {
 	Tags string `json:"tags"`
 }
 
-var excludedTags = []string{"news", "news+talk", "military", "sports"}
-var excludedLanguages = []string{"chinese", "iranian"}
+var excludedTags = []string{"news", "news+talk", "military", "sports", "podcast", "podcasts"}
+var excludedLanguages = []string{"chinese", "iranian", "mandarin"}
 
 // Get valid servers
 func GetServer() (string, error) {
