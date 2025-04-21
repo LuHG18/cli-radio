@@ -63,6 +63,17 @@ func main() {
 			prevFlag = true
 			fmt.Printf("Playing previous: %s\n", prevStation.Name)
 			playback.PlayStation(prevStation.URL, prevStation.Name)
+		case "add":
+			songURI, err := playback.GetSongURI()
+			if err != nil {
+				fmt.Printf("Error getting song URI: %s\n", err)
+			}
+			msg, err := spotify.AddToPlaylist(songURI)
+			if err != nil {
+				fmt.Printf("Error adding to playlist: %s\n", err)
+				continue
+			}
+			fmt.Println(msg)
 		case "end":
 			playback.StopPlayback()
 			fmt.Println("Playback stopped")

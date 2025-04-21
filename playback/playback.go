@@ -74,11 +74,7 @@ func PlayStation(url string, stationName string) {
 							songInfo = "Song unavailable"
 						}
 						updateCurrentSong(songInfo) // Update the current song
-						token, err := spotify.GetToken()
-						if err != nil {
-							fmt.Println("Erorr from GetToken() :", err)
-						}
-						songURI, err := GetSongURI(token)
+						songURI, err := GetSongURI()
 						if err != nil {
 							fmt.Println("Error in GetSongURI:", err)
 							return
@@ -161,7 +157,11 @@ type searchResponse struct {
 	} `json:"tracks"`
 }
 
-func GetSongURI(token *spotify.Token) (string, error) {
+func GetSongURI() (string, error) {
+	token, err := spotify.GetToken()
+	if err != nil {
+		fmt.Println("Erorr from GetToken() :", err)
+	}
 	query := CurrentSong
 	if query == "" {
 		return "", fmt.Errorf("invalid song string: %q", CurrentSong)
@@ -197,6 +197,6 @@ func GetSongURI(token *spotify.Token) (string, error) {
 		return "", fmt.Errorf("no tracks found for this search: %q", query)
 	}
 
-	fmt.Printf("URI: %s", data.Tracks.Items[0].URI)
+	fmt.Printf("URI: %s\n", data.Tracks.Items[0].URI)
 	return data.Tracks.Items[0].URI, nil
 }
