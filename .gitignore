@@ -27,3 +27,8 @@ cli-radio
 *.swp
 *.swo
 *.DS_Store
+
+# Audio Output
+*.raw
+*.mp3
+*.wav

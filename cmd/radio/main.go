@@ -2,8 +2,10 @@ package main
 
 import (
 	"cli-radio/api"
+	"cli-radio/api/shazam"
 	"cli-radio/api/spotify"
 	"cli-radio/playback"
+	recogntion "cli-radio/recognition"
 	"fmt"
 	"strings"
 )
@@ -90,6 +92,22 @@ func main() {
 				continue
 			}
 			fmt.Println(msg)
+		case "d":
+			err := recogntion.RecordClip()
+			if err != nil {
+				fmt.Printf("Error in RecordClip: %s\n", err)
+				continue
+			}
+
+			apiResponse, err := shazam.IdentifySong()
+			if err != nil {
+				fmt.Printf("Error in IdentifySong: %s\n", err)
+				continue
+			}
+
+			songURI := shazam.ExtractSpotifyURI(apiResponse)
+			fmt.Printf("Detected Song URI: %s\n", songURI)
+
 		case "e", "end":
 			playback.StopPlayback()
 			fmt.Println("Playback stopped")
