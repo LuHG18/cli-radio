@@ -86,7 +86,7 @@ func main() {
 					if response == "y" {
 						detectedURI, detectedTitle, err := shazam.DetectSong()
 						if err != nil || detectedURI == "" {
-							fmt.Println("Could not detect the song with Shazam.")
+							fmt.Printf("Could not detect the song with Shazam: %s", err)
 							continue
 						}
 						fmt.Printf("Adding %s\n", detectedTitle)
