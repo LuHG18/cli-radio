@@ -5,7 +5,6 @@ import (
 	"cli-radio/api/shazam"
 	"cli-radio/api/spotify"
 	"cli-radio/playback"
-	recogntion "cli-radio/recognition"
 	"fmt"
 	"strings"
 )
@@ -82,7 +81,22 @@ func main() {
 				var response string
 				fmt.Scanln(&response)
 				if strings.ToLower(response) != "y" {
-					fmt.Println("Not adding song.")
+					fmt.Printf("Would you like to detect the song with Shazam instead? (y/n): ")
+					fmt.Scanln(&response)
+					if response == "y" {
+						detectedURI, detectedTitle, err := shazam.DetectSong()
+						if err != nil || detectedURI == "" {
+							fmt.Println("Could not detect the song with Shazam.")
+							continue
+						}
+						fmt.Printf("Adding %s\n", detectedTitle)
+						msg, err := spotify.AddToPlaylist(detectedURI)
+						if err != nil {
+							fmt.Printf("Error adding to playlist: %s\n", err)
+							continue
+						}
+						fmt.Println(msg)
+					}
 					continue
 				}
 			}
@@ -92,21 +106,29 @@ func main() {
 				continue
 			}
 			fmt.Println(msg)
-		case "d":
-			err := recogntion.RecordClip()
-			if err != nil {
-				fmt.Printf("Error in RecordClip: %s\n", err)
+		case "d", "detect":
+			fmt.Println("Detecting song using Shazam...")
+			songURI, songTitle, err := shazam.DetectSong()
+			if err != nil || songTitle == "" {
+				fmt.Printf("Error: %s\n", err)
 				continue
 			}
 
-			apiResponse, err := shazam.IdentifySong()
-			if err != nil {
-				fmt.Printf("Error in IdentifySong: %s\n", err)
-				continue
-			}
+			fmt.Printf("Detected song: %s\n", songTitle)
+			fmt.Printf("Would you like to add it to playlist? (y/n): ")
 
-			songURI := shazam.ExtractSpotifyURI(apiResponse)
-			fmt.Printf("Detected Song URI: %s\n", songURI)
+			var response string
+			fmt.Scanln(&response)
+			if response == "y" {
+				msg, err := spotify.AddToPlaylist(songURI)
+				if err != nil {
+					fmt.Printf("Error: %s\n", err)
+				} else {
+					fmt.Println(msg)
+				}
+			} else {
+				fmt.Println("Not adding...")
+			}
 
 		case "e", "end":
 			playback.StopPlayback()

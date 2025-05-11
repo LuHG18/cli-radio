@@ -2,6 +2,7 @@ package shazam
 
 import (
 	"bytes"
+	"cli-radio/api/spotify"
 	recogntion "cli-radio/recognition"
 	"encoding/base64"
 	"encoding/json"
@@ -10,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -98,11 +100,48 @@ func ExtractSpotifyURI(response *ShazamResponse) string {
 	for _, provider := range response.Track.Hub.Providers {
 		if provider.Type == "SPOTIFY" {
 			for _, action := range provider.Actions {
-				if action.URI != "" {
+				// Prioritize direct Spotify track URIs
+				if strings.HasPrefix(action.URI, "spotify:track:") {
 					return action.URI
+				}
+			}
+			// Fallback: Check for search URIs if no direct track URI found
+			for _, action := range provider.Actions {
+				if strings.HasPrefix(action.URI, "spotify:search:") {
+					// Construct a search query using the song title and artist
+					songTitle := response.Track.Title
+					artistName := response.Track.Subtitle
+					searchQuery := fmt.Sprintf("%s %s", songTitle, artistName)
+					track, err := spotify.GetSongURI(searchQuery)
+					if err != nil {
+						fmt.Println("Error getting track from Spotify:", err)
+						return ""
+					}
+					return track.URI
 				}
 			}
 		}
 	}
 	return ""
+}
+
+func DetectSong() (string, string, error) {
+	err := recogntion.RecordClip()
+	if err != nil {
+		return "", "", fmt.Errorf("error in RecordClip: %s", err)
+	}
+
+	apiResponse, err := IdentifySong()
+	if err != nil {
+		return "", "", fmt.Errorf("error in IdentifySong: %s", err)
+	}
+
+	songURI := ExtractSpotifyURI(apiResponse)
+	if songURI == "" {
+		return "", "", fmt.Errorf("song URI could not be found")
+	}
+
+	songTitle := apiResponse.Track.Title + " - " + apiResponse.Track.Subtitle
+
+	return songURI, songTitle, nil
 }
