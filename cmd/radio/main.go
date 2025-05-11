@@ -2,6 +2,7 @@ package main
 
 import (
 	"cli-radio/api"
+	"cli-radio/api/shazam"
 	"cli-radio/api/spotify"
 	"cli-radio/playback"
 	"fmt"
@@ -65,20 +66,70 @@ func main() {
 			fmt.Printf("Playing previous: %s\n", prevStation.Name)
 			playback.PlayStation(prevStation.URL, prevStation.Name)
 		case "a", "add":
-			if strings.ToLower(playback.GetCurrentSong()) == "song unavailable" || strings.TrimSpace(playback.GetCurrentSong()) == "" {
+			currentSong := playback.GetCurrentSong()
+			if strings.ToLower(currentSong) == "song unavailable" || strings.TrimSpace(currentSong) == "" {
 				fmt.Println("Song not currently available. Wait for a track to play to add.")
 				continue
 			}
-			songURI, err := playback.GetSongURI()
+			track, err := spotify.GetSongURI(currentSong)
 			if err != nil {
 				fmt.Printf("Error getting song URI: %s\n", err)
 			}
-			msg, err := spotify.AddToPlaylist(songURI)
+
+			if spotify.CompareSongs(currentSong, track) > (len(strings.TrimSpace(currentSong)) / 2) {
+				fmt.Printf("The song we found seems to be a bit different than we expected.\nFound: %s by %s\nProceed? (y/n): ", track.Name, track.Artists[0].Name)
+				var response string
+				fmt.Scanln(&response)
+				if strings.ToLower(response) != "y" {
+					fmt.Printf("Would you like to detect the song with Shazam instead? (y/n): ")
+					fmt.Scanln(&response)
+					if response == "y" {
+						detectedURI, detectedTitle, err := shazam.DetectSong()
+						if err != nil || detectedURI == "" {
+							fmt.Println("Could not detect the song with Shazam.")
+							continue
+						}
+						fmt.Printf("Adding %s\n", detectedTitle)
+						msg, err := spotify.AddToPlaylist(detectedURI)
+						if err != nil {
+							fmt.Printf("Error adding to playlist: %s\n", err)
+							continue
+						}
+						fmt.Println(msg)
+					}
+					continue
+				}
+			}
+			msg, err := spotify.AddToPlaylist(track.URI)
 			if err != nil {
 				fmt.Printf("Error adding to playlist: %s\n", err)
 				continue
 			}
 			fmt.Println(msg)
+		case "d", "detect":
+			fmt.Println("Detecting song using Shazam...")
+			songURI, songTitle, err := shazam.DetectSong()
+			if err != nil || songTitle == "" {
+				fmt.Printf("Error: %s\n", err)
+				continue
+			}
+
+			fmt.Printf("Detected song: %s\n", songTitle)
+			fmt.Printf("Would you like to add it to playlist? (y/n): ")
+
+			var response string
+			fmt.Scanln(&response)
+			if response == "y" {
+				msg, err := spotify.AddToPlaylist(songURI)
+				if err != nil {
+					fmt.Printf("Error: %s\n", err)
+				} else {
+					fmt.Println(msg)
+				}
+			} else {
+				fmt.Println("Not adding...")
+			}
+
 		case "e", "end":
 			playback.StopPlayback()
 			fmt.Println("Playback stopped")

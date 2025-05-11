@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
+
+	"github.com/lithammer/fuzzysearch/fuzzy"
 )
 
 const (
@@ -112,4 +115,80 @@ func GetPlaylist() (*Playlist, error) {
 		return nil, err
 	}
 	return &playlist, nil
+}
+
+type Track struct {
+	URI     string `json:"uri"`
+	Name    string `json:"name"`
+	Artists []struct {
+		Name string `json:"name"`
+	} `json:"artists"`
+}
+
+type searchResponse struct {
+	Tracks struct {
+		Items []Track `json:"items"`
+	} `json:"tracks"`
+}
+
+func GetSongURI(song string) (*Track, error) {
+	token, err := GetToken()
+	if err != nil {
+		fmt.Println("Erorr from GetToken() :", err)
+	}
+	query := song
+	if query == "" {
+		return nil, fmt.Errorf("invalid song string: %q", song)
+	}
+
+	fullUrl := fmt.Sprintf("%s?q=%s&type=track&limit=1", SearchUrl, url.QueryEscape(query))
+	// build the body of the request
+	req, err := http.NewRequest("GET", fullUrl, nil)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't build song request: %w", err)
+	}
+
+	// add a header to the request with our access token
+	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
+
+	// make the actual request
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("search request failed: %w", err)
+	}
+
+	defer resp.Body.Close() // close the TCP connection
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("spotify search failed: %q", resp.Status)
+	}
+
+	var data searchResponse
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil { // err stays within the scope of the conditional
+		return nil, fmt.Errorf("could not decode response: %w", err)
+	}
+
+	if len(data.Tracks.Items) == 0 {
+		return nil, fmt.Errorf("no tracks found for this search: %q", query)
+	}
+
+	return &data.Tracks.Items[0], nil
+}
+
+func CompareSongs(currentSong string, track *Track) int {
+	rawInput := strings.ToLower(strings.TrimSpace(currentSong))
+
+	trackArtist := strings.ToLower(strings.TrimSpace(track.Artists[0].Name))
+	trackName := strings.ToLower(strings.TrimSpace(track.Name))
+
+	firstOrder := trackArtist + " - " + trackName
+	secondOrder := trackName + " - " + trackArtist
+
+	score1 := fuzzy.LevenshteinDistance(firstOrder, rawInput)
+	score2 := fuzzy.LevenshteinDistance(secondOrder, rawInput)
+
+	if score1 < score2 {
+		return score1
+	}
+
+	return score2
 }
