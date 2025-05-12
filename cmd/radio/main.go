@@ -12,6 +12,12 @@ import (
 func main() {
 	fmt.Println("Welcome")
 
+	if err := playback.SetupAudio(); err != nil {
+		fmt.Printf("Error setting up audio device: %s\n", err)
+		return
+	}
+	defer playback.RestoreAudio()
+
 	playback.HandleSignals(playback.StopPlayback)
 	var prevFlag bool = false
 	var currentStation, prevStation *api.Station = nil, nil
@@ -86,7 +92,7 @@ func main() {
 					if response == "y" {
 						detectedURI, detectedTitle, err := shazam.DetectSong()
 						if err != nil || detectedURI == "" {
-							fmt.Printf("Could not detect the song with Shazam: %s", err)
+							fmt.Printf("Could not detect the song with Shazam: %s\n", err)
 							continue
 						}
 						fmt.Printf("Adding %s\n", detectedTitle)
