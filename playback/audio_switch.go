@@ -34,6 +34,16 @@ func switchAudioDevice(device string) error {
 	return nil
 }
 
+func IsBluetoothDevice(device string) bool {
+	keywords := []string{"Headphones", "Bose", "Sony", "AirPods", "Bluetooth", "BT"}
+	for _, keyword := range keywords {
+		if strings.Contains(strings.ToLower(device), strings.ToLower(keyword)) {
+			return true
+		}
+	}
+	return false
+}
+
 // sets up the audio output to our Blackhole device
 func SetupAudio() error {
 	if !checkSAS() {
@@ -48,18 +58,21 @@ func SetupAudio() error {
 	originalDevice = device
 	fmt.Printf("Current audio device: %s\n", originalDevice)
 
-	// now we want to check if the Multi-Output Device has been set up
-	allDevices, err := exec.Command("SwitchAudioSource", "-a").Output() // grab all the devices
-	if err != nil {
-		return fmt.Errorf("audio devices could not be found: %w", err)
+	if IsBluetoothDevice(originalDevice) {
+		// now we want to check if the Multi-Output Device has been set up
+		allDevices, err := exec.Command("SwitchAudioSource", "-a").Output() // grab all the devices
+		if err != nil {
+			return fmt.Errorf("audio devices could not be found: %w", err)
+		}
+
+		// check that the multi-output device exists in the list of available devices
+		if !strings.Contains(string(allDevices), MultiOutputDevice) {
+			return fmt.Errorf("multi output device not configured... see documentation to set up Blackhole with Bluetooth")
+		}
+		switchAudioDevice(MultiOutputDevice)
 	}
 
-	// check that the multi-output device exists in the list of available devices
-	if !strings.Contains(string(allDevices), MultiOutputDevice) {
-		return fmt.Errorf("multi output device not configured... see documentation to set up Blackhole with Bluetooth")
-	}
-
-	return switchAudioDevice(MultiOutputDevice)
+	return nil
 }
 
 // FIXME: might need to introduce some error handling here
