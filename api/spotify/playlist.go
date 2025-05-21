@@ -31,7 +31,7 @@ type Playlist struct {
 func AddToPlaylist(songUri string) (string, error) {
 	token, err := GetToken()
 	if err != nil {
-		fmt.Println("Erorr from GetToken() :", err)
+		return "", fmt.Errorf("error from GetToken() : %w", err)
 	}
 
 	playlist, err := GetPlaylist()
