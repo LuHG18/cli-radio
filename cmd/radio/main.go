@@ -116,7 +116,7 @@ func main() {
 			fmt.Println("Detecting song using Shazam...")
 			songURI, songTitle, err := shazam.DetectSong()
 			if err != nil || songTitle == "" {
-				fmt.Printf("Error: %s\n", err)
+				fmt.Printf("Could not detect the song with Shazam: %s\n", err)
 				continue
 			}
 

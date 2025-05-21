@@ -1,4 +1,4 @@
-package recogntion
+package recognition
 
 import (
 	"fmt"
@@ -15,9 +15,9 @@ func RecordClip() error {
 		"-y",
 		"-f", "avfoundation",
 		"-i", ":1",
-		"-t", "8",
-		"-filter:a", "volume=5.0",
-		"-ac", "1",
+		"-t", "7",
+		"-filter:a", "volume=7.0",
+		"-ch_layout", "mono",
 		"-ar", "44100",
 		"-acodec", "pcm_s16le",
 		"-f", "s16le",

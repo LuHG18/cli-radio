@@ -3,7 +3,7 @@ package shazam
 import (
 	"bytes"
 	"cli-radio/api/spotify"
-	recogntion "cli-radio/recognition"
+	"cli-radio/recognition"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -55,7 +55,7 @@ func init() {
 
 func IdentifySong() (*ShazamResponse, error) {
 	// Read the converted audio file
-	file, err := os.ReadFile(recogntion.OutputFile)
+	file, err := os.ReadFile(recognition.OutputFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
@@ -126,7 +126,7 @@ func ExtractSpotifyURI(response *ShazamResponse) string {
 }
 
 func DetectSong() (string, string, error) {
-	err := recogntion.RecordClip()
+	err := recognition.RecordClip()
 	if err != nil {
 		return "", "", fmt.Errorf("error in RecordClip: %s", err)
 	}
