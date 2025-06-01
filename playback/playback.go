@@ -4,9 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"log"
-
 	"os/exec"
-
 	"strings"
 	"sync"
 	"syscall"
@@ -26,7 +24,9 @@ func PlayStation(url string, stationName string) {
 	updateCurrentSong("")
 
 	fmt.Printf("Starting playback: %s\n", stationName)
-	currentProcess = exec.Command("mpv", "--no-video", url)
+	// brings every station to the same volume
+	audioFix := "lavfi=[loudnorm=I=-16:TP=-1.5:LRA=11," + "aresample=44100]"
+	currentProcess = exec.Command("mpv", "--no-video", "--af="+audioFix, url)
 
 	stdoutPipe, err := currentProcess.StdoutPipe()
 	if err != nil {

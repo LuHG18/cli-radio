@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -43,8 +44,10 @@ func FetchStation() (*Station, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get server: %w", err)
 	}
-
-	url := buildFilterURL(server)
+	url, err := buildFilterURL(server)
+	if err != nil {
+		return nil, fmt.Errorf("error building API url: %w", err)
+	}
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("API request failed: %w", err)
@@ -74,15 +77,32 @@ func FetchStation() (*Station, error) {
 	return &stations[0], nil
 }
 
-func buildFilterURL(baseURL string) string {
-	url := baseURL + "/json/stations/bytag/?"
+func buildFilterURL(baseURL string) (string, error) {
+	q := url.Values{}
+
+	// q.Set("codec", "opus,aac,ogg")
+	q.Set("bitrateMin", "96")
+	q.Set("hidebroken", "true")
+
+	// add your negative tags / languages
 	for _, tag := range excludedTags {
-		url += fmt.Sprintf("tag=!%s&", tag)
+		q.Add("tagNot", tag)
 	}
 	for _, lang := range excludedLanguages {
-		url += fmt.Sprintf("language=!%s&", lang)
+		q.Add("languageNot", lang)
 	}
-	// We use a unique time stamp to prevent from getting the same stations
-	url += fmt.Sprintf("order=random&limit=1&nocache=%d", time.Now().UnixNano())
-	return url
+
+	q.Set("order", "random")
+	q.Set("limit", "1")
+	q.Set("nocache", fmt.Sprint(time.Now().UnixNano()))
+
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		return "", err
+	}
+
+	u.Path = "/json/stations/search"
+	u.RawQuery = q.Encode()
+
+	return u.String(), nil
 }

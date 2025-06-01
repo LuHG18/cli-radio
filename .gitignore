@@ -32,3 +32,6 @@ cli-radio
 *.raw
 *.mp3
 *.wav
+
+# Front End
+tui.md
