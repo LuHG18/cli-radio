@@ -24,7 +24,8 @@ func PlayStation(url string, stationName string) {
 	updateCurrentSong("")
 
 	fmt.Printf("Starting playback: %s\n", stationName)
-	// brings every station to the same volume
+	// brings every station to the same volume with loudnorm filter
+	// single pass, set consistent sample rate
 	audioFix := "lavfi=[loudnorm=I=-16:TP=-1.5:LRA=11," + "aresample=44100]"
 	currentProcess = exec.Command("mpv", "--no-video", "--af="+audioFix, url)
 
