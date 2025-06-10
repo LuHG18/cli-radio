@@ -15,14 +15,16 @@ type model struct {
 	currentSong    string
 	prevStation    *api.Station
 	prevFlag       bool
-	err            error
-	cursor         int
-	menu           []string
 
-	logLines    []string
-	maxLogLines int
-	logBuffer   chan string
+	statusMsg string
+
+	err    error
+	cursor int
+	menu   []string
 }
+
+type statusUpdateMsg string
+type songUpdateMsg string
 
 // can be used to return a command for some initial IO
 // might use this to do PlayStation -> different UI setup when app first spins up
@@ -33,17 +35,6 @@ func (m model) Init() tea.Cmd {
 
 // return the updated model
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// Check for logs
-	select {
-	case line := <-m.logBuffer:
-		m.logLines = append(m.logLines, line)
-		if len(m.logLines) > m.maxLogLines {
-			m.logLines = m.logLines[1:]
-		}
-	default:
-		// no new log line
-	}
-
 	switch msg := msg.(type) {
 	// test for key press first
 	case tea.KeyMsg:
@@ -62,6 +53,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		}
+	case statusUpdateMsg:
+		m.statusMsg = string(msg)
+	case songUpdateMsg:
+		m.currentSong = string(msg)
+
 	}
 	return m, nil
 }
@@ -71,15 +67,15 @@ func handleUserAction(m model) (tea.Model, tea.Cmd) {
 
 	switch selected {
 	case "Play a Station":
-		PlayRandomStation(&m)
+		return m, PlayRandomStation(&m)
 	case "Next Station":
-		PlayNextStation(&m)
+		return m, PlayNextStation(&m)
 	case "Previous Station":
-		PlayPreviousStation(&m)
+		return m, PlayPreviousStation(&m)
 	case "Add Song to Playlist":
-		AddCurrentSong(&m)
+		return m, AddCurrentSong(&m)
 	case "Detect Song":
-		DetectAndAddSong(&m)
+		return m, DetectAndAddSong(&m)
 	}
 	return m, nil
 }
@@ -107,10 +103,14 @@ func (m model) View() string {
 	// Optional: add spacing
 	b.WriteString("\n")
 
-	b.WriteString("\n--- Output ---\n")
-	for _, line := range m.logLines {
-		b.WriteString(line + "\n")
-	}
+	b.WriteString("\n--- Status ---\n")
+	b.WriteString(fmt.Sprintf("%s\n", m.statusMsg))
 
 	return b.String()
+}
+
+func status(text string) tea.Cmd {
+	return func() tea.Msg {
+		return statusUpdateMsg(text)
+	}
 }

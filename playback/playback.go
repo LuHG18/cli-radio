@@ -3,7 +3,6 @@ package playback
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os/exec"
 	"strings"
 	"sync"
@@ -11,9 +10,11 @@ import (
 )
 
 var (
-	currentProcess *exec.Cmd
-	CurrentSong    string
-	playbackMutex  sync.Mutex
+	currentProcess   *exec.Cmd
+	CurrentSong      string
+	playbackMutex    sync.Mutex
+	SongUpdateChan   chan string
+	StatusUpdateChan chan string
 )
 
 func PlayStation(url string, stationName string) {
@@ -23,7 +24,10 @@ func PlayStation(url string, stationName string) {
 
 	updateCurrentSong("")
 
-	fmt.Printf("Starting playback: %s\n", stationName)
+	if StatusUpdateChan != nil {
+		StatusUpdateChan <- fmt.Sprintf("Starting playback: %s", stationName)
+	}
+
 	// brings every station to the same volume with loudnorm filter
 	// single pass, set consistent sample rate
 	audioFix := "lavfi=[loudnorm=I=-16:TP=-1.5:LRA=11," + "aresample=44100]"
@@ -31,14 +35,19 @@ func PlayStation(url string, stationName string) {
 
 	stdoutPipe, err := currentProcess.StdoutPipe()
 	if err != nil {
-		log.Fatalf("Failed to create stdout pipe: %v", err)
+		if StatusUpdateChan != nil {
+			StatusUpdateChan <- fmt.Sprintf("failed to create stdout pipe: %v", err)
+		}
 	}
 	// Detach the process
 	currentProcess.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true, // Detach from the parent process group
 	}
 	if err := currentProcess.Start(); err != nil {
-		log.Fatalf("Failed to play station: %v", err)
+		if StatusUpdateChan != nil {
+			StatusUpdateChan <- fmt.Sprintf("Failed to play station: %v", err)
+		}
+		return
 	}
 
 	go func() {
@@ -70,18 +79,25 @@ func PlayStation(url string, stationName string) {
 						if songInfo == "" || songInfo == "-" {
 							songInfo = "Song unavailable"
 							updateCurrentSong(songInfo)
-							fmt.Printf("\rNow playing: %s\n> ", songInfo)
+							if StatusUpdateChan != nil {
+								StatusUpdateChan <- "Song unavailable"
+							}
 							return
+						} else {
+							updateCurrentSong(songInfo)
+							if StatusUpdateChan != nil {
+								StatusUpdateChan <- fmt.Sprintf("Now playing: %s", songInfo)
+							}
 						}
-						updateCurrentSong(songInfo) // Update the current song
-						fmt.Printf("\rNow playing: %s\n> ", songInfo)
 					}
 				}
 			}
 		}
 
 		if err := scanner.Err(); err != nil {
-			fmt.Printf("Error reading metadata: %v\n", err)
+			if StatusUpdateChan != nil {
+				StatusUpdateChan <- fmt.Sprintf("Error reading metadata: %v", err)
+			}
 		}
 	}()
 
@@ -93,9 +109,13 @@ func PlayStation(url string, stationName string) {
 				// -1 indicates the process was killed (signal SIGKILL)
 				return
 			}
-			fmt.Printf("Playback finished with error: %v\n", err)
+			if StatusUpdateChan != nil {
+				StatusUpdateChan <- fmt.Sprintf("Playback finished with error: %v", err)
+			}
 		} else {
-			fmt.Println("Playback finished.")
+			if StatusUpdateChan != nil {
+				StatusUpdateChan <- "Playback finished."
+			}
 		}
 	}()
 }
@@ -105,9 +125,13 @@ func StopPlayback() {
 		// Send a SIGKILL to the current process group
 		err := syscall.Kill(-currentProcess.Process.Pid, syscall.SIGKILL)
 		if err != nil {
-			fmt.Printf("Failed to stop playback: %v\n", err)
+			if StatusUpdateChan != nil {
+				StatusUpdateChan <- fmt.Sprintf("Failed to stop playback: %v", err)
+			}
 		} else {
-			fmt.Println("Stopped current playback.")
+			if StatusUpdateChan != nil {
+				StatusUpdateChan <- "Stopped current playback."
+			}
 		}
 
 		currentProcess = nil
@@ -124,4 +148,22 @@ func updateCurrentSong(song string) {
 	playbackMutex.Lock()
 	defer playbackMutex.Unlock()
 	CurrentSong = song
+
+	if SongUpdateChan != nil {
+		select {
+		case SongUpdateChan <- song:
+		default: // don’t block if no one’s listening
+		}
+	}
+}
+
+func init() {
+	SongUpdateChan = make(chan string)
+	StatusUpdateChan = make(chan string)
+}
+
+func sendStatus(msg string) {
+	if StatusUpdateChan != nil {
+		StatusUpdateChan <- msg
+	}
 }

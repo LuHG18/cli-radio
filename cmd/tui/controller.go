@@ -14,8 +14,7 @@ import (
 func PlayRandomStation(m *model) tea.Cmd {
 	station, err := api.FetchStation()
 	if err != nil {
-		m.err = fmt.Errorf("error fetching station: %w", err)
-		return nil
+		return status(fmt.Sprintf("error fetching station: %v", err))
 	}
 	m.currentStation = station
 	playback.PlayStation(station.URL, station.Name)
@@ -29,8 +28,7 @@ func PlayNextStation(m *model) tea.Cmd {
 	} else {
 		station, err := api.FetchStation()
 		if err != nil {
-			m.err = fmt.Errorf("error fetching next station: %w", err)
-			return nil
+			return status(fmt.Sprintf("error fetching next station: %v", err))
 		}
 		m.prevStation = m.currentStation
 		m.currentStation = station
@@ -41,11 +39,10 @@ func PlayNextStation(m *model) tea.Cmd {
 
 func PlayPreviousStation(m *model) tea.Cmd {
 	if m.prevStation == nil {
-		m.err = fmt.Errorf("no previous station")
-		return nil
+		return status(fmt.Sprintf("error fetching previous station"))
+
 	} else if m.prevFlag {
-		m.err = fmt.Errorf("can't go back more")
-		return nil
+		return status(fmt.Sprintf("can't go back more"))
 	}
 	m.prevFlag = true
 	playback.PlayStation(m.prevStation.URL, m.prevStation.Name)
@@ -55,14 +52,14 @@ func PlayPreviousStation(m *model) tea.Cmd {
 func AddCurrentSong(m *model) tea.Cmd {
 	currentSong := playback.GetCurrentSong()
 	if strings.ToLower(currentSong) == "song unavailable" || strings.TrimSpace(currentSong) == "" {
-		m.err = fmt.Errorf("no song to add")
-		return nil
+		return status(fmt.Sprintf("no song to add"))
+
 	}
 
 	track, err := spotify.GetSongURI(currentSong)
 	if err != nil {
-		m.err = fmt.Errorf("get song uri error: %w", err)
-		return nil
+		return status(fmt.Sprintf("get song uri error: %v", err))
+
 	}
 
 	if spotify.CompareSongs(currentSong, track) > (len(strings.TrimSpace(currentSong)) / 2) {
@@ -70,31 +67,25 @@ func AddCurrentSong(m *model) tea.Cmd {
 		return nil
 	}
 
-	msg, err := spotify.AddToPlaylist(track.URI)
-	if err != nil {
-		m.err = fmt.Errorf("add to playlist error: %w", err)
-		return nil
+	errr := spotify.AddToPlaylist(track.URI)
+	if errr != nil {
+		return status(fmt.Sprintf("add to playlist error: %v", errr))
+
 	}
 
-	m.err = fmt.Errorf(msg) // show as status
-	return nil
+	return status(fmt.Sprintf("Added %s", currentSong))
 }
 
 func DetectAndAddSong(m *model) tea.Cmd {
 	songURI, songTitle, err := shazam.DetectSong()
 	if err != nil || songTitle == "" {
-		m.err = fmt.Errorf("shazam detection error: %w", err)
-		return nil
+		return status(fmt.Sprintf("shazam detection error: %v", err))
 	}
 
-	msg, err := spotify.AddToPlaylist(songURI)
+	errr := spotify.AddToPlaylist(songURI)
 	if err != nil {
-		m.err = fmt.Errorf("playlist add error: %w", err)
-		return nil
-	} else {
-		fmt.Println(msg)
+		return status(fmt.Sprintf("playlist add error: %v", errr))
 	}
 
-	m.err = fmt.Errorf("Added %s", songTitle)
-	return nil
+	return status(fmt.Sprintf("Added %s", songTitle))
 }

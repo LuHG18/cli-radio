@@ -96,22 +96,20 @@ func main() {
 							continue
 						}
 						fmt.Printf("Adding %s\n", detectedTitle)
-						msg, err := spotify.AddToPlaylist(detectedURI)
+						errr := spotify.AddToPlaylist(detectedURI)
 						if err != nil {
-							fmt.Printf("Error adding to playlist: %s\n", err)
+							fmt.Printf("Error adding to playlist: %s\n", errr)
 							continue
 						}
-						fmt.Println(msg)
 					}
 					continue
 				}
 			}
-			msg, err := spotify.AddToPlaylist(track.URI)
+			errr := spotify.AddToPlaylist(track.URI)
 			if err != nil {
-				fmt.Printf("Error adding to playlist: %s\n", err)
+				fmt.Printf("Error adding to playlist: %s\n", errr)
 				continue
 			}
-			fmt.Println(msg)
 		case "d", "detect":
 			fmt.Println("Detecting song using Shazam...")
 			songURI, songTitle, err := shazam.DetectSong()
@@ -126,11 +124,9 @@ func main() {
 			var response string
 			fmt.Scanln(&response)
 			if response == "y" {
-				msg, err := spotify.AddToPlaylist(songURI)
+				err := spotify.AddToPlaylist(songURI)
 				if err != nil {
 					fmt.Printf("Error: %s\n", err)
-				} else {
-					fmt.Println(msg)
 				}
 			} else {
 				fmt.Println("Not adding...")

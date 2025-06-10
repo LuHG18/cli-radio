@@ -28,15 +28,15 @@ type Playlist struct {
 	Name string `json:"name"`
 }
 
-func AddToPlaylist(songUri string) (string, error) {
+func AddToPlaylist(songUri string) error {
 	token, err := GetToken()
 	if err != nil {
-		return "", fmt.Errorf("error from GetToken() : %w", err)
+		return fmt.Errorf("error from GetToken() : %w", err)
 	}
 
 	playlist, err := GetPlaylist()
 	if err != nil {
-		return "", err
+		return err
 	}
 	fullUrl := fmt.Sprintf(addToPlaylistUrl, playlist.ID)
 
@@ -45,27 +45,27 @@ func AddToPlaylist(songUri string) (string, error) {
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	req, err := http.NewRequest("POST", fullUrl, bytes.NewBuffer(body))
 	if err != nil {
-		return "", err
+		return err
 	}
 	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("failed to add track: %s — %s", resp.Status, string(respBody))
+		return fmt.Errorf("failed to add track: %s — %s", resp.Status, string(respBody))
 	}
 
-	return "Song Added", nil
+	return nil
 }
 
 func CreatePlaylist(token *Token) (string, error) {
@@ -134,8 +134,9 @@ type searchResponse struct {
 func GetSongURI(song string) (*Track, error) {
 	token, err := GetToken()
 	if err != nil {
-		fmt.Println("Erorr from GetToken() :", err)
+		return nil, fmt.Errorf("error from GetToken(): %w", err)
 	}
+
 	query := song
 	if query == "" {
 		return nil, fmt.Errorf("invalid song string: %q", song)
