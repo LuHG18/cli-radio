@@ -2,6 +2,8 @@ package main
 
 import (
 	"cli-radio/api"
+	"cli-radio/api/spotify"
+	"cli-radio/playback"
 	"strings"
 
 	// "cli-radio/playback"
@@ -18,6 +20,9 @@ type model struct {
 
 	statusMsg string
 
+	initialized bool
+	initStatus  string
+
 	err    error
 	cursor int
 	menu   []string
@@ -25,12 +30,39 @@ type model struct {
 
 type statusUpdateMsg string
 type songUpdateMsg string
+type initCompleteMsg struct{}
+type initStatusMsg string
+
+func setInitStatus(msg string) tea.Cmd {
+	return func() tea.Msg {
+		return initStatusMsg(msg)
+	}
+}
+
+func initStartup() tea.Cmd {
+	return func() tea.Msg {
+		// Try to get a token or trigger authentication
+		if err := spotify.Authenticate(); err != nil {
+			return initStatusMsg(fmt.Sprintf("Auth failed: %v", err))
+		}
+
+		// Setup audio
+		if err := playback.SetupAudio(); err != nil {
+			return initStatusMsg(fmt.Sprintf("Audio setup failed: %v", err))
+		}
+
+		return initCompleteMsg{}
+	}
+}
 
 // can be used to return a command for some initial IO
 // might use this to do PlayStation -> different UI setup when app first spins up
 // notice the (m model) syntax "attaches" Init() function to model structs
 func (m model) Init() tea.Cmd {
-	return nil
+	return tea.Batch(
+		setInitStatus("Initializing..."),
+		initStartup(),
+	)
 }
 
 // return the updated model
@@ -57,7 +89,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.statusMsg = string(msg)
 	case songUpdateMsg:
 		m.currentSong = string(msg)
-
+	case initStatusMsg:
+		m.initStatus = string(msg)
+		return m, nil
+	case initCompleteMsg:
+		m.initialized = true
+		m.initStatus = "All set! Use the menu below."
+		return m, nil
 	}
 	return m, nil
 }
@@ -81,6 +119,13 @@ func handleUserAction(m model) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
+	if !m.initialized {
+		var b strings.Builder
+		b.WriteString("Starting up...\n\n")
+		b.WriteString(fmt.Sprintf("%s\n", m.initStatus))
+		return b.String()
+	}
+
 	var b strings.Builder
 
 	stationName := "None"

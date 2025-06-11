@@ -33,8 +33,7 @@ func PlayNextStation(m *model) tea.Cmd {
 		m.prevStation = m.currentStation
 		m.currentStation = station
 	}
-	playback.PlayStation(m.currentStation.URL, m.currentStation.Name)
-	return nil
+	return playStationCmd(m.currentStation.URL, m.currentStation.Name)
 }
 
 func PlayPreviousStation(m *model) tea.Cmd {
@@ -88,4 +87,11 @@ func DetectAndAddSong(m *model) tea.Cmd {
 	}
 
 	return status(fmt.Sprintf("Added %s", songTitle))
+}
+
+func playStationCmd(url, name string) tea.Cmd {
+	return func() tea.Msg {
+		playback.PlayStation(url, name)
+		return statusUpdateMsg(fmt.Sprintf("Playing: %s", name))
+	}
 }
