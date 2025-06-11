@@ -3,7 +3,6 @@ package main
 import (
 	"cli-radio/api"
 	"cli-radio/api/spotify"
-	"cli-radio/playback"
 	"strings"
 
 	// "cli-radio/playback"
@@ -41,17 +40,17 @@ func setInitStatus(msg string) tea.Cmd {
 
 func initStartup() tea.Cmd {
 	return func() tea.Msg {
-		// Try to get a token or trigger authentication
-		if err := spotify.Authenticate(); err != nil {
-			return initStatusMsg(fmt.Sprintf("Auth failed: %v", err))
+		_, err := spotify.Authenticate()
+		if err != nil {
+			return initStatusMsg(fmt.Sprintf("Spotify auth failed: %v", err))
 		}
 
-		// Setup audio
-		if err := playback.SetupAudio(); err != nil {
-			return initStatusMsg(fmt.Sprintf("Audio setup failed: %v", err))
-		}
+		// if err := playback.SetupAudio(); err != nil {
+		// 	return initStatusMsg(fmt.Sprintf("Audio setup failed: %v", err))
+		// }
 
-		return initCompleteMsg{}
+		return setInitStatus("Init completed OK")
+
 	}
 }
 
@@ -91,7 +90,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.currentSong = string(msg)
 	case initStatusMsg:
 		m.initStatus = string(msg)
-		return m, nil
+		return m, func() tea.Msg {
+			return initCompleteMsg{}
+		}
 	case initCompleteMsg:
 		m.initialized = true
 		m.initStatus = "All set! Use the menu below."

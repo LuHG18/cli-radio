@@ -53,7 +53,7 @@ func switchAudioDevice(device string) error {
 	if err != nil {
 		return fmt.Errorf("issue when switching audio source: %w", err)
 	}
-	fmt.Printf("Switched to audio device: %s\n", device)
+	// fmt.Printf("Switched to audio device: %s\n", device)
 	return nil
 }
 

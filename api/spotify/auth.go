@@ -38,25 +38,24 @@ func init() {
 	}
 }
 
-func Authenticate() error {
-	token, err := GetToken()
+func Authenticate() (string, error) {
+	_, err := GetToken()
 	if err == nil {
-		// Token exists and is valid
-		fmt.Println("User already authenticated.")
-		return nil
+		return "Spotify already authenticated.", nil
 	}
 
-	fmt.Println("No valid token found. Starting authentication process.")
-
-	// Open the Spotify authorization page
 	authPage := fmt.Sprintf("%s?client_id=%s&response_type=code&redirect_uri=%s&scope=playlist-modify-public",
 		authURL, clientID, url.QueryEscape(redirectURI))
-	fmt.Printf("Open the following URL in your browser to authenticate:\n%s\n", authPage)
 
-	// Start the local server to capture the auth code
-	code := StartAuthServer()
+	// Send this back first to tell the user what to do
+	authMessage := fmt.Sprintf("Please authenticate Spotify:\n\n%s\n\nWaiting for confirmation...", authPage)
 
-	// Exchange the code for an access token
+	// Open browser message will be shown first, and then we'll wait for code
+	code, err := StartAuthServer()
+	if err != nil {
+		return "", fmt.Errorf("failed to receive auth code: %w", err)
+	}
+
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
 	data.Set("code", code)
@@ -66,61 +65,62 @@ func Authenticate() error {
 
 	resp, err := http.Post(tokenURL, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
 	if err != nil {
-		return fmt.Errorf("failed to exchange code for token: %v", err)
+		return "", fmt.Errorf("failed to exchange code for token: %v", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("failed to authenticate: %s", string(body))
+		return "", fmt.Errorf("failed to authenticate: %s", string(body))
 	}
 
-	// Parse the token response and save it
+	var token Token
 	if err := json.NewDecoder(resp.Body).Decode(&token); err != nil {
-		return fmt.Errorf("failed to parse token response: %v", err)
+		return "", fmt.Errorf("failed to parse token response: %v", err)
 	}
 
-	// Tokens are valid for 1 hour
 	token.ExpiresAt = time.Now().Unix() + 3600
-	if err := saveToken(token); err != nil {
-		return fmt.Errorf("failed to save token: %v", err)
-	}
-	// check if playlist was created yet
-	if _, err := GetPlaylist(); err != nil {
-		CreatePlaylist(token)
-		fmt.Println("Authentication successful and TEMPLE playlist created")
-		return nil
+	if err := saveToken(&token); err != nil {
+		return "", fmt.Errorf("failed to save token: %v", err)
 	}
 
-	fmt.Println("Authentication successful ")
-	return nil
+	// Create playlist if needed
+	if _, err := GetPlaylist(); err != nil {
+		_, _ = CreatePlaylist(&token)
+		return authMessage + "\n\nAuthentication successful. Playlist created.", nil
+	}
+
+	return authMessage + "\n\nAuthentication successful.", nil
 }
 
-func StartAuthServer() string {
-	var authCode string
+func StartAuthServer() (string, error) {
+	authCodeChan := make(chan string)
+	errChan := make(chan error)
+
+	server := &http.Server{Addr: ":8888"}
 
 	http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
-		authCode = r.URL.Query().Get("code")
-		if authCode == "" {
-			http.Error(w, "Authorization code not found", http.StatusBadRequest)
+		code := r.URL.Query().Get("code")
+		if code == "" {
+			errChan <- fmt.Errorf("authorization code not found")
 			return
 		}
-
 		fmt.Fprintln(w, "Authentication successful! You can close this page.")
-		fmt.Printf("Authorization code received: %s\n", authCode)
+		authCodeChan <- code
 	})
 
-	// Start the server in a Goroutine
 	go func() {
-		err := http.ListenAndServe(":8888", nil)
-		if err != nil {
-			fmt.Printf("Error starting server: %v\n", err)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			errChan <- err
 		}
 	}()
 
-	fmt.Println("Waiting for authorization code...")
-	for authCode == "" {
-		// Wait until the user logs in and the server receives the callback
+	select {
+	case code := <-authCodeChan:
+		_ = server.Close()
+		return code, nil
+	case err := <-errChan:
+		_ = server.Close()
+		return "", err
 	}
-	return authCode
 }
