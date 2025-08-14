@@ -24,11 +24,9 @@ func RecordClip() error {
 		OutputFile,
 	)
 
-	fmt.Println("Recording audio...")
 	err := cmd.Run()
 	if err != nil {
 		return fmt.Errorf("recording failed: %w", err)
 	}
-	fmt.Println("Recording complete.")
 	return nil
 }

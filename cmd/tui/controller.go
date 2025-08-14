@@ -75,18 +75,19 @@ func AddCurrentSong(m *model) tea.Cmd {
 	return status(fmt.Sprintf("Added %s", currentSong))
 }
 
+// Emits a Msg (not a Cmd) when run.
 func DetectAndAddSong(m *model) tea.Cmd {
-	songURI, songTitle, err := shazam.DetectSong()
-	if err != nil || songTitle == "" {
-		return status(fmt.Sprintf("shazam detection error: %v", err))
+	return func() tea.Msg {
+		// long-running work here
+		songURI, songTitle, err := shazam.DetectSong()
+		if err != nil || songTitle == "" {
+			return statusUpdateMsg(fmt.Sprintf("shazam detection error: %v", err))
+		}
+		if err := spotify.AddToPlaylist(songURI); err != nil {
+			return statusUpdateMsg(fmt.Sprintf("playlist add error: %v", err))
+		}
+		return statusUpdateMsg(fmt.Sprintf("Added %s", songTitle))
 	}
-
-	errr := spotify.AddToPlaylist(songURI)
-	if err != nil {
-		return status(fmt.Sprintf("playlist add error: %v", errr))
-	}
-
-	return status(fmt.Sprintf("Added %s", songTitle))
 }
 
 func playStationCmd(url, name string) tea.Cmd {

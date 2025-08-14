@@ -114,7 +114,10 @@ func handleUserAction(m model) (tea.Model, tea.Cmd) {
 	case "Add Song to Playlist":
 		return m, AddCurrentSong(&m)
 	case "Detect Song":
-		return m, DetectAndAddSong(&m)
+		return m, tea.Sequence(
+			status("Detecting..."),
+			DetectAndAddSong(&m),
+		)
 	}
 	return m, nil
 }
