@@ -61,10 +61,10 @@ func AddCurrentSong(m *model) tea.Cmd {
 
 	}
 
-	if spotify.CompareSongs(currentSong, track) > (len(strings.TrimSpace(currentSong)) / 2) {
-		// TODO: present confirmation bubble to user
-		return nil
-	}
+	// if spotify.CompareSongs(currentSong, track) > (len(strings.TrimSpace(currentSong)) / 2) {
+	// 	// TODO: present confirmation bubble to user
+	// 	return nil
+	// }
 
 	errr := spotify.AddToPlaylist(track.URI)
 	if errr != nil {
