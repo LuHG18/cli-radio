@@ -1,6 +1,6 @@
 # cli-radio
 
-tiny terminal tool to stumble on new music via random radio stations.
+terminal tool to find new music via random radio stations - written in go.
 
 <div align="center">
   <a href="https://lucasg.pythonanywhere.com/link">
@@ -10,7 +10,7 @@ tiny terminal tool to stumble on new music via random radio stations.
     />
   </a>
   <br/>
-  <sub>^ live album art from my “finds” playlist — click it to open</sub>
+  <h4>^ live feed of songs i found using the tool; the app drops them right into this playlist — click to open</h4>
 </div>
 
 ---
@@ -20,11 +20,11 @@ tiny terminal tool to stumble on new music via random radio stations.
 <video src="https://github.com/user-attachments/assets/2ef0adf4-5630-48d4-978b-53b720e2f258"
        width="820" controls muted playsinline preload="none"></video>
 
-<sub>If the player doesn’t load on your device: https://github.com/user-attachments/assets/2ef0adf4-5630-48d4-978b-53b720e2f258</sub>
+<h4>If the player doesn’t load on your device: https://github.com/user-attachments/assets/2ef0adf4-5630-48d4-978b-53b720e2f258</h4>
 
 ---
 
 ## tui branch
 
-a nicer text UI (menu, navigation, etc.) is brewing here:  
+working on a nicer text UI (menu, navigation, etc.) here:  
 --> https://github.com/LuHG18/cli-radio/tree/tui
